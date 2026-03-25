@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cartographie RMFP</title>
+  <meta
+    name="description"
+    content="Cartographie interactive des correspondances RMFP avec visualisation et t&eacute;l&eacute;chargement de fiches PDF."
+  />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">RMFP</p>
+        <h1>Cartographie interactive des m&eacute;tiers</h1>
+        <p class="subtitle">
+          Explorez l&apos;arborescence Domaine fonctionnel &rarr; Famille &rarr; Emploi de r&eacute;f&eacute;rence &rarr; M&eacute;tier FP.
+        </p>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box">
+          <input
+            id="search-input"
+            type="search"
+            placeholder="Rechercher un domaine, une famille, un ER ou un m&eacute;tier FP..."
+            autocomplete="off"
+          />
+          <button id="clear-search" class="ghost-button" type="button">Effacer</button>
+          <div id="search-results" class="search-results hidden" aria-live="polite"></div>
+        </div>
+
+        <div class="toolbar-actions">
+          <button id="collapse-all" class="ghost-button" type="button">Replier tout</button>
+          <button id="expand-first-level" class="ghost-button" type="button">D&eacute;plier niveau 1</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="tree-panel card">
+        <div class="panel-header">
+          <div class="panel-heading">
+            <div class="panel-title-row">
+              <h2>Arborescence</h2>
+              <span id="current-path" class="current-path" aria-live="polite"></span>
+            </div>
+            <p id="status-text" class="status-text" role="status" aria-live="polite">Chargement des donn&eacute;es...</p>
+          </div>
+          <div class="legend">
+            <span><i class="dot domain"></i>Domaine / Famille / ER</span>
+            <span><i class="dot leaf"></i>M&eacute;tier FP</span>
+          </div>
+        </div>
+
+        <div id="tree-shell" class="tree-shell" tabindex="-1">
+          <svg id="tree-svg" aria-label="Diagramme interactif"></svg>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="pdf-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal="true"></div>
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">Pr&eacute;visualisation</p>
+          <h2 id="modal-title">Fiche PDF</h2>
+        </div>
+        <div class="modal-actions">
+          <a id="modal-download-link" class="ghost-button" href="#" download>T&eacute;l&eacute;charger</a>
+          <button id="close-modal" class="ghost-button" type="button">Fermer</button>
+        </div>
+      </div>
+
+      <div class="modal-body">
+        <iframe id="pdf-frame" title="Aper&ccedil;u PDF"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
