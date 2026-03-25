@@ -15,10 +15,10 @@ const ACTION_BUTTON_GAP = 10;
 const ACTION_PANEL_WIDTH =
   ACTION_PANEL_PADDING * 2 + ACTION_BUTTON_WIDTH * 2 + ACTION_BUTTON_GAP;
 const ACTION_PANEL_HEIGHT = ACTION_PANEL_PADDING * 2 + ACTION_BUTTON_HEIGHT;
-const ACTION_AREA_WIDTH = ACTION_OFFSET_X + ACTION_PANEL_WIDTH + 18;
-const FOCUS_PADDING = { top: 72, right: 108, bottom: 72, left: 78 };
-const SEARCH_FOCUS_PADDING = { top: 92, right: 136, bottom: 92, left: 94 };
-const MARGIN = { top: 48, right: 136, bottom: 56, left: 38 };
+const ACTION_AREA_WIDTH = ACTION_OFFSET_X + ACTION_PANEL_WIDTH + 8;
+const FOCUS_PADDING = { top: 72, right: 84, bottom: 72, left: 78 };
+const SEARCH_FOCUS_PADDING = { top: 92, right: 108, bottom: 92, left: 94 };
+const MARGIN = { top: 48, right: 52, bottom: 56, left: 38 };
 
 const treeShell = document.getElementById("tree-shell");
 const svg = d3.select("#tree-svg");
@@ -49,6 +49,7 @@ let layoutState = {
   width: 0,
   height: 0,
   topOffset: MARGIN.top,
+  leftOffset: 0,
 };
 
 init().catch((error) => {
@@ -165,9 +166,17 @@ function buildTree() {
 function update(source) {
   treeLayout(root);
 
-  const nodes = root.descendants();
-  const links = root.links();
+  const allNodes = root.descendants();
+  const hideRootNode = shouldHideRootNode(allNodes);
+  const visualOffsetX = hideRootNode ? LEVEL_GAP : 0;
+  const nodes = allNodes.filter((node) => !hideRootNode || node.depth > 0);
   visibleNodeIds = new Set(nodes.map((node) => node.data.id));
+  const links = root
+    .links()
+    .filter(
+      (link) =>
+        visibleNodeIds.has(link.source.data.id) && visibleNodeIds.has(link.target.data.id)
+    );
 
   let leftNode = root;
   let rightNode = root;
@@ -176,7 +185,7 @@ function update(source) {
     if (node.x > rightNode.x) rightNode = node;
   });
 
-  const maxDepth = d3.max(nodes, (node) => node.depth) ?? 0;
+  const maxRenderableX = d3.max(nodes, (node) => getRenderedNodeX(node, visualOffsetX)) ?? 0;
   const selectedActionWidth =
     selectedNode && isLeaf(selectedNode) && visibleNodeIds.has(selectedNode.data.id)
       ? ACTION_AREA_WIDTH
@@ -184,11 +193,7 @@ function update(source) {
 
   const width = Math.max(
     treeShell.clientWidth,
-    MARGIN.left +
-      maxDepth * LEVEL_GAP +
-      LEAF_WIDTH +
-      MARGIN.right +
-      selectedActionWidth
+    MARGIN.left + maxRenderableX + LEAF_WIDTH + MARGIN.right + selectedActionWidth
   );
   const height = Math.max(
     720,
@@ -199,6 +204,7 @@ function update(source) {
     width,
     height,
     topOffset: MARGIN.top - leftNode.x,
+    leftOffset: visualOffsetX,
   };
 
   svg.attr("width", width).attr("height", height).attr("viewBox", [0, 0, width, height]);
@@ -213,20 +219,23 @@ function update(source) {
     .append("path")
     .attr("class", "link-path")
     .attr("d", () => {
-      const origin = { x: source.x0 ?? source.x, y: source.y0 ?? source.y };
+      const origin = {
+        x: source.x0 ?? source.x,
+        y: getRenderedNodeX(source, visualOffsetX),
+      };
       return elbowPath({ source: origin, target: origin });
     })
     .merge(linkSelection)
     .transition()
     .duration(TRANSITION_DURATION)
-    .attr("d", (link) => elbowPath(link));
+    .attr("d", (link) => elbowPath(toRenderedLink(link, visualOffsetX)));
 
   linkSelection
     .exit()
     .transition()
     .duration(TRANSITION_DURATION - 40)
     .attr("d", () => {
-      const origin = { x: source.x, y: source.y };
+      const origin = { x: source.x, y: getRenderedNodeX(source, visualOffsetX) };
       return elbowPath({ source: origin, target: origin });
     })
     .remove();
@@ -239,7 +248,7 @@ function update(source) {
     .attr("class", (node) => nodeGroupClass(node))
     .attr(
       "transform",
-      () => `translate(${source.y0 ?? source.y}, ${source.x0 ?? source.x})`
+      () => `translate(${getRenderedNodeX(source, visualOffsetX)}, ${source.x0 ?? source.x})`
     )
     .style("cursor", "pointer")
     .on("click", (_, node) => handleNodeClick(node));
@@ -282,7 +291,7 @@ function update(source) {
   nodeMerge
     .transition()
     .duration(TRANSITION_DURATION)
-    .attr("transform", (node) => `translate(${node.y}, ${node.x})`);
+    .attr("transform", (node) => `translate(${getRenderedNodeX(node, visualOffsetX)}, ${node.x})`);
 
   nodeMerge
     .select("rect")
@@ -315,7 +324,7 @@ function update(source) {
     .exit()
     .transition()
     .duration(TRANSITION_DURATION - 40)
-    .attr("transform", () => `translate(${source.y}, ${source.x})`)
+    .attr("transform", () => `translate(${getRenderedNodeX(source, visualOffsetX)}, ${source.x})`)
     .remove();
 
   renderInlineActions();
@@ -569,7 +578,7 @@ function getFocusBounds(node, options = {}) {
 }
 
 function getNodeBounds(node) {
-  const left = node.y + MARGIN.left;
+  const left = getRenderedNodeX(node) + MARGIN.left;
   const top = node.x + layoutState.topOffset - NODE_HEIGHT / 2;
 
   return {
@@ -581,7 +590,7 @@ function getNodeBounds(node) {
 }
 
 function getActionBounds(node) {
-  const left = node.y + MARGIN.left + getNodeWidth(node) + ACTION_OFFSET_X;
+  const left = getRenderedNodeX(node) + MARGIN.left + getNodeWidth(node) + ACTION_OFFSET_X;
   const top = node.x + layoutState.topOffset - ACTION_PANEL_HEIGHT / 2;
 
   return {
@@ -698,7 +707,7 @@ function renderInlineActions() {
     .attr(
       "transform",
       (node) =>
-        `translate(${node.y + getNodeWidth(node) + ACTION_OFFSET_X}, ${node.x - ACTION_PANEL_HEIGHT / 2})`
+        `translate(${getRenderedNodeX(node) + getNodeWidth(node) + ACTION_OFFSET_X}, ${node.x - ACTION_PANEL_HEIGHT / 2})`
     );
 
   actionSelection.exit().remove();
@@ -816,6 +825,27 @@ function elbowPath(link) {
   return `M${link.source.y},${link.source.x}
     H${bendX}
     C${bendX + 12},${link.source.x} ${bendX + 12},${link.target.x} ${link.target.y},${link.target.x}`;
+}
+
+function toRenderedLink(link, leftOffset = layoutState.leftOffset || 0) {
+  return {
+    source: {
+      x: link.source.x,
+      y: getRenderedNodeX(link.source, leftOffset),
+    },
+    target: {
+      x: link.target.x,
+      y: getRenderedNodeX(link.target, leftOffset),
+    },
+  };
+}
+
+function getRenderedNodeX(node, leftOffset = layoutState.leftOffset || 0) {
+  return Math.max(0, node.y - leftOffset);
+}
+
+function shouldHideRootNode(nodes) {
+  return nodes.some((node) => node.depth >= 4);
 }
 
 function fullNodeLabel(node) {
