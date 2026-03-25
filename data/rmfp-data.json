@@ -9327,7 +9327,7 @@
       },
       {
         "id": "domaine-683d0e426d",
-        "name": "Finances publiques",
+        "name": "Finances Publiques",
         "level": "domaine",
         "children": [
           {
@@ -9347,7 +9347,7 @@
                     "file_pdf": "pdf/sample.pdf",
                     "path": [
                       "Cartographie RMFP",
-                      "Finances publiques",
+                      "Finances Publiques",
                       "Contrôle",
                       "Chargée / Chargé de domaine",
                       "Chargée / Chargé de domaine"
@@ -9377,7 +9377,7 @@
                     "file_pdf": "pdf/sample.pdf",
                     "path": [
                       "Cartographie RMFP",
-                      "Finances publiques",
+                      "Finances Publiques",
                       "Comptabilité",
                       "Gestionnaire de comptabilité",
                       "Gestionnaire de comptes relation clientèle"
@@ -9757,7 +9757,7 @@
       },
       {
         "id": "domaine-96e27532d5",
-        "name": "Ressources humaines",
+        "name": "Ressources Humaines",
         "level": "domaine",
         "children": [
           {
@@ -9777,7 +9777,7 @@
                     "file_pdf": "pdf/sample.pdf",
                     "path": [
                       "Cartographie RMFP",
-                      "Ressources humaines",
+                      "Ressources Humaines",
                       "Encadrement",
                       "Directrice / Directeur des ressources humaines",
                       "Directrice / Directeur des ressources humaines"
@@ -29195,14 +29195,14 @@
     },
     {
       "id": "leaf-27becec626f9",
-      "domaine_fonctionnel": "Finances publiques",
+      "domaine_fonctionnel": "Finances Publiques",
       "famille": "Contrôle",
       "intitule_er": "Chargée / Chargé de domaine",
       "intitule_metier_fp": "Chargée / Chargé de domaine",
       "file_pdf": "pdf/sample.pdf",
       "path": [
         "Cartographie RMFP",
-        "Finances publiques",
+        "Finances Publiques",
         "Contrôle",
         "Chargée / Chargé de domaine",
         "Chargée / Chargé de domaine"
@@ -29210,14 +29210,14 @@
     },
     {
       "id": "leaf-bc927e53944c",
-      "domaine_fonctionnel": "Finances publiques",
+      "domaine_fonctionnel": "Finances Publiques",
       "famille": "Comptabilité",
       "intitule_er": "Gestionnaire de comptabilité",
       "intitule_metier_fp": "Gestionnaire de comptes relation clientèle",
       "file_pdf": "pdf/sample.pdf",
       "path": [
         "Cartographie RMFP",
-        "Finances publiques",
+        "Finances Publiques",
         "Comptabilité",
         "Gestionnaire de comptabilité",
         "Gestionnaire de comptes relation clientèle"
@@ -29450,14 +29450,14 @@
     },
     {
       "id": "leaf-ce93995542fe",
-      "domaine_fonctionnel": "Ressources humaines",
+      "domaine_fonctionnel": "Ressources Humaines",
       "famille": "Encadrement",
       "intitule_er": "Directrice / Directeur des ressources humaines",
       "intitule_metier_fp": "Directrice / Directeur des ressources humaines",
       "file_pdf": "pdf/sample.pdf",
       "path": [
         "Cartographie RMFP",
-        "Ressources humaines",
+        "Ressources Humaines",
         "Encadrement",
         "Directrice / Directeur des ressources humaines",
         "Directrice / Directeur des ressources humaines"
