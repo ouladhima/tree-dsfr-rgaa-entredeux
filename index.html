@@ -1,95 +1,289 @@
-<!DOCTYPE html>
-<html lang="fr">
+<!doctype html>
+<html lang="fr" data-fr-scheme="light">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cartographie RMFP</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="format-detection" content="telephone=no,date=no,address=no,email=no,url=no">
+  <meta name="theme-color" content="#000091">
   <meta
     name="description"
-    content="Cartographie interactive des correspondances RMFP avec visualisation et t&eacute;l&eacute;chargement de fiches PDF."
-  />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap"
-    rel="stylesheet"
-  />
-  <link rel="stylesheet" href="styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+    content="Cartographie RMFP au format DSFR avec navigation HTML accessible, recherche et liens vers les fiches PDF."
+  >
+  <link rel="apple-touch-icon" href="dsfr/favicon/apple-touch-icon.png">
+  <link rel="icon" href="dsfr/favicon/favicon.svg" type="image/svg+xml">
+  <link rel="shortcut icon" href="dsfr/favicon/favicon.ico" type="image/x-icon">
+  <link rel="manifest" href="dsfr/favicon/manifest.webmanifest" crossorigin="use-credentials">
+  <link rel="stylesheet" href="dsfr/dsfr.min.css">
+  <link rel="stylesheet" href="dsfr/utility/utility.min.css">
+  <link rel="stylesheet" href="styles.css">
+  <title>Cartographie RMFP - Consultation des metiers</title>
 </head>
 <body>
-  <div class="page">
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">RMFP</p>
-        <h1>Cartographie interactive des m&eacute;tiers</h1>
-        <p class="subtitle">
-          Explorez l&apos;arborescence Domaine fonctionnel &rarr; Famille &rarr; Emploi de r&eacute;f&eacute;rence &rarr; M&eacute;tier FP.
-        </p>
-      </div>
-
-      <div class="toolbar">
-        <div class="search-box">
-          <input
-            id="search-input"
-            type="search"
-            placeholder="Rechercher un domaine, une famille, un ER ou un m&eacute;tier FP..."
-            autocomplete="off"
-          />
-          <button id="clear-search" class="ghost-button" type="button">Effacer</button>
-          <div id="search-results" class="search-results hidden" aria-live="polite"></div>
-        </div>
-
-        <div class="toolbar-actions">
-          <button id="collapse-all" class="ghost-button" type="button">Replier tout</button>
-          <button id="expand-first-level" class="ghost-button" type="button">D&eacute;plier niveau 1</button>
-        </div>
-      </div>
-    </header>
-
-    <main class="layout">
-      <section class="tree-panel card">
-        <div class="panel-header">
-          <div class="panel-heading">
-            <div class="panel-title-row">
-              <h2>Arborescence</h2>
-              <span id="current-path" class="current-path" aria-live="polite"></span>
-            </div>
-            <p id="status-text" class="status-text" role="status" aria-live="polite">Chargement des donn&eacute;es...</p>
-          </div>
-          <div class="legend">
-            <span><i class="dot domain"></i>Domaine / Famille / ER</span>
-            <span><i class="dot leaf"></i>M&eacute;tier FP</span>
-          </div>
-        </div>
-
-        <div id="tree-shell" class="tree-shell" tabindex="-1">
-          <svg id="tree-svg" aria-label="Diagramme interactif"></svg>
-        </div>
-      </section>
-    </main>
+  <div class="fr-skiplinks">
+    <nav class="fr-container" role="navigation" aria-label="Acces rapide">
+      <ul class="fr-skiplinks__list">
+        <li><a class="fr-link" href="#contenu">Contenu</a></li>
+        <li><a class="fr-link" href="#recherche">Recherche</a></li>
+        <li><a class="fr-link" href="#pied-de-page">Pied de page</a></li>
+      </ul>
+    </nav>
   </div>
 
-  <div id="pdf-modal" class="modal hidden" aria-hidden="true">
-    <div class="modal-backdrop" data-close-modal="true"></div>
-    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-      <div class="modal-header">
-        <div>
-          <p class="eyebrow">Pr&eacute;visualisation</p>
-          <h2 id="modal-title">Fiche PDF</h2>
+  <header role="banner" class="fr-header">
+    <div class="fr-header__body">
+      <div class="fr-container">
+        <div class="fr-header__body-row">
+          <div class="fr-header__brand fr-enlarge-link">
+            <div class="fr-header__brand-top">
+              <div class="fr-header__logo">
+                <a href="./" title="Accueil - Cartographie RMFP - Republique Francaise">
+                  <p class="fr-logo">
+                    Republique
+                    <br>Francaise
+                  </p>
+                </a>
+              </div>
+            </div>
+            <div class="fr-header__service">
+              <a href="./" title="Accueil - Cartographie RMFP - Republique Francaise">
+                <p class="fr-header__service-title">Cartographie RMFP</p>
+              </a>
+              <p class="fr-header__service-tagline">
+                Consultation des correspondances Domaine fonctionnel &rarr; Famille &rarr; Emploi de reference &rarr; Metier FP
+              </p>
+            </div>
+          </div>
         </div>
-        <div class="modal-actions">
-          <a id="modal-download-link" class="ghost-button" href="#" download>T&eacute;l&eacute;charger</a>
-          <button id="close-modal" class="ghost-button" type="button">Fermer</button>
-        </div>
-      </div>
-
-      <div class="modal-body">
-        <iframe id="pdf-frame" title="Aper&ccedil;u PDF"></iframe>
       </div>
     </div>
-  </div>
+  </header>
+
+  <main id="contenu" role="main">
+    <div class="fr-container">
+      <section class="fr-py-6w fr-py-md-8w">
+        <div class="fr-grid-row fr-grid-row--gutters">
+          <div class="fr-col-12 fr-col-lg-8">
+            <p class="fr-badge rmfp-badge rmfp-badge--info">Catalogue metiers RMFP</p>
+            <h1 class="fr-mb-2w">Cartographie interactive des metiers RMFP</h1>
+            <p class="fr-text--lg fr-mb-0">
+              Explorez la cartographie des metiers au format HTML accessible, recherchez une fiche et ouvrez le document PDF associe.
+            </p>
+          </div>
+          <div class="fr-col-12 fr-col-lg-4">
+            <div class="fr-alert fr-alert--info fr-mb-0" id="accessibilite-mention">
+              <h2 class="fr-alert__title">Accessibilite du service</h2>
+              <p>
+                Etat initial :
+                <a class="fr-link" href="accessibilite/">Accessibilite : non conforme</a>.
+                Les PDF lies depuis la cartographie ne sont pas inclus dans la premiere declaration.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <noscript>
+        <div class="fr-alert fr-alert--warning fr-mb-4w">
+          <h2 class="fr-alert__title">JavaScript est requis</h2>
+          <p>
+            La cartographie interactive necessite JavaScript pour charger les donnees JSON et afficher l&apos;arborescence.
+            Consultez la
+            <a class="fr-link" href="accessibilite/">declaration d&apos;accessibilite</a>
+            pour connaitre le dispositif de contact a completer avant publication.
+          </p>
+        </div>
+      </noscript>
+
+      <div class="fr-grid-row fr-grid-row--gutters rmfp-layout fr-pb-8w">
+        <section class="fr-col-12 fr-col-lg-7" aria-labelledby="cartographie-title">
+          <div class="rmfp-surface fr-p-3w fr-p-md-4w">
+            <div class="rmfp-section-head">
+              <div>
+                <h2 class="fr-h4 fr-mb-1w" id="cartographie-title">Cartographie</h2>
+                <p class="fr-text--sm fr-mb-0" id="tree-description">
+                  Utilisez les boutons de branche pour ouvrir ou fermer un niveau puis selectionnez un metier FP pour afficher la fiche associee.
+                </p>
+              </div>
+              <p class="fr-badge rmfp-badge rmfp-badge--info fr-mb-0" id="dataset-badge">Chargement</p>
+            </div>
+
+            <div class="fr-mt-4w" id="recherche">
+              <div class="fr-input-group">
+                <label class="fr-label" for="search-input">
+                  Rechercher un domaine, une famille, un emploi de reference ou un metier
+                </label>
+                <input
+                  class="fr-input"
+                  id="search-input"
+                  type="search"
+                  autocomplete="off"
+                  aria-describedby="search-help search-status"
+                >
+                <p class="fr-hint-text" id="search-help">
+                  La recherche inspecte les quatre niveaux de la cartographie et affiche jusqu&apos;a huit resultats.
+                </p>
+              </div>
+
+              <div
+                class="fr-btns-group fr-btns-group--inline-sm fr-btns-group--right fr-mb-2w"
+                role="group"
+                aria-label="Actions de recherche et d'affichage"
+              >
+                <button class="fr-btn fr-btn--secondary" id="clear-search" type="button">Effacer la recherche</button>
+                <button class="fr-btn fr-btn--tertiary" id="collapse-all" type="button">Replier tout</button>
+                <button class="fr-btn fr-btn--tertiary" id="expand-first-level" type="button">Deplier niveau 1</button>
+              </div>
+
+              <p class="fr-text--sm fr-mb-2w" id="search-status" role="status" aria-live="polite">
+                Chargement des donnees...
+              </p>
+
+              <div class="rmfp-search-results" id="search-results-region" hidden>
+                <h3 class="fr-h6 fr-mb-2w" id="search-results-title">Resultats de recherche</h3>
+                <ul class="rmfp-results-list fr-mb-0" id="search-results" aria-labelledby="search-results-title"></ul>
+              </div>
+            </div>
+
+            <div class="rmfp-tree-wrapper fr-mt-4w">
+              <ul class="rmfp-tree-list" id="tree-root" aria-describedby="tree-description"></ul>
+            </div>
+          </div>
+        </section>
+
+        <aside class="fr-col-12 fr-col-lg-5" aria-labelledby="details-title">
+          <div class="rmfp-surface rmfp-details fr-p-3w fr-p-md-4w">
+            <div class="rmfp-section-head">
+              <div>
+                <h2 class="fr-h4 fr-mb-1w" id="details-title">Fiche selectionnee</h2>
+                <p class="fr-text--sm fr-mb-0" id="selection-summary">
+                  Selectionnez un metier FP dans l&apos;arborescence ou via la recherche.
+                </p>
+              </div>
+              <p class="fr-badge rmfp-badge rmfp-badge--neutral fr-mb-0" id="selection-state">Aucune selection</p>
+            </div>
+
+            <div class="fr-alert fr-alert--info fr-mt-4w" id="details-empty">
+              <h3 class="fr-alert__title">Aucun metier selectionne</h3>
+              <p>
+                Le panneau de droite affiche le chemin complet, le type de fiche et les liens documentaires du metier choisi.
+              </p>
+            </div>
+
+            <div class="hidden" id="details-content">
+              <p class="fr-text--sm fr-mb-1w">Chemin complet</p>
+              <p class="rmfp-path fr-mb-3w" id="detail-path"></p>
+
+              <dl class="rmfp-definition-list">
+                <div>
+                  <dt>Niveau</dt>
+                  <dd id="detail-level"></dd>
+                </div>
+                <div>
+                  <dt>Domaine fonctionnel</dt>
+                  <dd id="detail-domain"></dd>
+                </div>
+                <div>
+                  <dt>Famille</dt>
+                  <dd id="detail-family"></dd>
+                </div>
+                <div>
+                  <dt>Emploi de reference</dt>
+                  <dd id="detail-employment"></dd>
+                </div>
+                <div>
+                  <dt>Document</dt>
+                  <dd id="detail-document"></dd>
+                </div>
+              </dl>
+
+              <div class="fr-btns-group fr-mt-4w">
+                <a
+                  class="fr-btn fr-icon-external-link-line"
+                  id="detail-open-link"
+                  href="pdf/sample.pdf"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  Ouvrir la fiche PDF
+                </a>
+                <a
+                  class="fr-btn fr-btn--secondary fr-icon-download-line"
+                  id="detail-download-link"
+                  href="pdf/sample.pdf"
+                  download
+                >
+                  Telecharger la fiche PDF
+                </a>
+              </div>
+
+              <p class="fr-text--sm fr-mt-3w fr-mb-0" id="detail-pdf-note">
+                Le document PDF s&apos;ouvre dans un nouvel onglet. Ces PDF ne sont pas inclus dans la premiere declaration d&apos;accessibilite du service web.
+              </p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <footer class="fr-footer" role="contentinfo" id="pied-de-page">
+    <div class="fr-container">
+      <div class="fr-footer__body">
+        <div class="fr-footer__brand fr-enlarge-link">
+          <a href="./" title="Retour a l'accueil - Cartographie RMFP - Republique Francaise">
+            <p class="fr-logo">
+              Republique
+              <br>Francaise
+            </p>
+          </a>
+        </div>
+        <div class="fr-footer__content">
+          <p class="fr-footer__content-desc">
+            Service statique de consultation de la cartographie RMFP. Les contenus institutionnels et les informations de publication doivent etre completes avant mise en ligne officielle.
+          </p>
+          <ul class="fr-footer__content-list">
+            <li class="fr-footer__content-item">
+              <a class="fr-footer__content-link" href="https://www.info.gouv.fr" target="_blank" rel="noopener">info.gouv.fr</a>
+            </li>
+            <li class="fr-footer__content-item">
+              <a class="fr-footer__content-link" href="https://www.service-public.gouv.fr" target="_blank" rel="noopener">service-public.gouv.fr</a>
+            </li>
+            <li class="fr-footer__content-item">
+              <a class="fr-footer__content-link" href="https://www.legifrance.gouv.fr" target="_blank" rel="noopener">legifrance.gouv.fr</a>
+            </li>
+            <li class="fr-footer__content-item">
+              <a class="fr-footer__content-link" href="https://www.data.gouv.fr" target="_blank" rel="noopener">data.gouv.fr</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="fr-footer__bottom">
+        <ul class="fr-footer__bottom-list">
+          <li class="fr-footer__bottom-item"><a class="fr-footer__bottom-link" href="accessibilite/">Accessibilite : non conforme</a></li>
+          <li class="fr-footer__bottom-item"><a class="fr-footer__bottom-link" href="schema-pluriannuel/">Schema pluriannuel</a></li>
+          <li class="fr-footer__bottom-item"><a class="fr-footer__bottom-link" href="plan-actions/">Plan d&apos;actions</a></li>
+          <li class="fr-footer__bottom-item"><a class="fr-footer__bottom-link" href="plan-du-site/">Plan du site</a></li>
+          <li class="fr-footer__bottom-item"><a class="fr-footer__bottom-link" href="mentions-legales/">Mentions legales</a></li>
+        </ul>
+        <div class="fr-footer__bottom-copy">
+          <p>
+            Sauf mention contraire, les contenus de ce site sont proposes sous
+            <a
+              class="fr-link"
+              href="https://github.com/etalab/licence-ouverte/blob/master/LO.md"
+              target="_blank"
+              rel="noopener"
+            >
+              licence Etalab-2.0
+            </a>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </footer>
 
   <script src="script.js"></script>
+  <script type="module" src="dsfr/dsfr.module.min.js"></script>
+  <script type="text/javascript" nomodule src="dsfr/dsfr.nomodule.min.js"></script>
 </body>
 </html>

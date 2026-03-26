@@ -1,158 +1,118 @@
-# Cartographie RMFP interactive
+# Cartographie RMFP - version DSFR / RGAA
 
-Projet statique prêt à être déposé sur GitHub pour être hébergé gratuitement via GitHub Pages.
+Site statique de consultation de la cartographie RMFP avec :
 
-## Ce que fait le projet
+- shell DSFR local vendore dans `dsfr/`
+- navigation HTML accessible en remplacement de l'ancien arbre SVG/D3
+- recherche metier / domaine / famille / ER
+- pages reglementaires RGAA
 
-- arborescence interactive : **Domaine fonctionnel → Famille → Emploi Référence → Métier FP**
-- ouverture / repli des branches au clic
-- barre de recherche simple
-- panneau d’action au dernier niveau
-- bouton **Visualiser** avec affichage du PDF dans une modale intégrée
-- bouton **Télécharger**
-- prise en charge future de la colonne `file_pdf`
-- fallback automatique sur `pdf/sample.pdf` si `file_pdf` est vide
+## Points clefs
 
-## Structure du projet
+- source de donnees unique : `data/rmfp-data.json`
+- aucun framework
+- aucun build step
+- dependance front retiree : plus de Google Fonts, plus de CDN D3
+- PDF exposes par liens standards "ouvrir" et "telecharger"
+
+## Structure
 
 ```text
 .
-├── .github/
-│   └── workflows/
-│       └── deploy.yml
-├── data/
-│   └── rmfp-data.json
-├── pdf/
-│   └── sample.pdf
-├── scripts/
-│   └── convert_excel_to_json.py
-├── .gitignore
-├── .nojekyll
-├── index.html
-├── script.js
-├── styles.css
-└── README.md
+|-- accessibilite/
+|   `-- index.html
+|-- data/
+|   |-- Correspondance RMFP.xlsx
+|   `-- rmfp-data.json
+|-- dsfr/
+|   |-- dsfr.min.css
+|   |-- dsfr.module.min.js
+|   |-- dsfr.nomodule.min.js
+|   |-- favicon/
+|   |-- fonts/
+|   |-- icons/
+|   `-- utility/
+|-- mentions-legales/
+|   `-- index.html
+|-- pdf/
+|   `-- sample.pdf
+|-- plan-actions/
+|   `-- index.html
+|-- plan-du-site/
+|   `-- index.html
+|-- schema-pluriannuel/
+|   `-- index.html
+|-- scripts/
+|   `-- convert_excel_to_json.py
+|-- index.html
+|-- script.js
+|-- styles.css
+`-- README.md
 ```
 
-## Étape 1 — Préparer les PDF
+## Lancer le site en local
 
-Dépose tes fiches PDF dans le dossier `pdf/`.
-
-Exemples de valeurs possibles dans la colonne Excel `file_pdf` :
-
-```text
-pdf/sample.pdf
-pdf/fiche_er001.pdf
-pdf/gestion_financiere.pdf
-```
-
-Le chemin doit être **relatif au site**.
-
-## Étape 2 — Préparer le fichier Excel
-
-Le script attend par défaut un fichier nommé :
-
-```text
-Correspondance RMFP.xlsx
-```
-
-Colonnes attendues :
-
-- `Domaine fonctionnel`
-- `Famille`
-- `Intitulé Emploi Référence (ERxxxxxx)`
-- `Intitulé Métier FPxxxxxx`
-- `file_pdf` (optionnelle pour l’instant, mais déjà prévue)
-
-La colonne `file_pdf` peut rester vide : le site utilisera alors automatiquement `pdf/sample.pdf`.
-
-## Étape 3 — Générer le JSON
-
-Depuis le dossier du projet :
-
-```bash
-python scripts/convert_excel_to_json.py
-```
-
-Si ton fichier Excel n’est pas à la racine ou porte un autre nom :
-
-```bash
-python scripts/convert_excel_to_json.py "mon_dossier/Correspondance RMFP.xlsx" "data/rmfp-data.json"
-```
-
-Tu peux aussi personnaliser le PDF de fallback :
-
-```bash
-python scripts/convert_excel_to_json.py "Correspondance RMFP.xlsx" "data/rmfp-data.json" --fallback-pdf "pdf/sample.pdf"
-```
-
-## Étape 4 — Tester localement
-
-Comme le site charge un fichier JSON, il faut le lancer avec un petit serveur HTTP local.
+Le JSON est charge via HTTP. Il faut donc lancer un serveur local.
 
 ```bash
 python -m http.server 8000
 ```
 
-Puis ouvre :
+Puis ouvrir :
 
 ```text
 http://localhost:8000
 ```
 
-## Étape 5 — Déployer sur GitHub Pages
+## Donnees
 
-### Option recommandée
-Le dépôt contient déjà un workflow GitHub Actions pour déployer automatiquement le site.
+Le contrat JSON n'a pas ete change :
 
-1. crée un dépôt GitHub
-2. dépose tous les fichiers du projet
-3. pousse sur la branche `main`
-4. dans GitHub, active **Pages** avec la source **GitHub Actions**
+- `tree`
+- `records`
+- `fallbackPdf`
+- `file_pdf`
 
-Le site sera ensuite publié automatiquement.
+Le script Python existant peut toujours regenerer `data/rmfp-data.json` depuis l'Excel.
 
-### Option simple
-Tu peux aussi héberger directement depuis la branche `main` si tu préfères, mais le workflow fourni est déjà prêt.
+## Pages disponibles
 
-## Comportement actuel
+- `/`
+- `/accessibilite/`
+- `/schema-pluriannuel/`
+- `/plan-actions/`
+- `/plan-du-site/`
+- `/mentions-legales/`
 
-- au chargement, seul le premier niveau est déplié
-- cliquer sur un nœud intermédiaire ouvre ou replie la branche
-- cliquer sur un **Métier FP** met à jour le panneau de droite
-- le bouton **Visualiser** ouvre le PDF dans une modale intégrée
-- le bouton **Télécharger** lance le téléchargement du même fichier
+## Accessibilite
 
-## Personnalisation rapide
+La page `accessibilite/` publie l'etat initial :
 
-### Modifier le titre de la racine
-Dans `data/rmfp-data.json`, clé :
+- `Accessibilite : non conforme`
 
-```json
-"tree": {
-  "name": "Cartographie RMFP"
-}
-```
+Important :
 
-### Modifier le PDF par défaut
-Dans `data/rmfp-data.json` :
+- les pages reglementaires contiennent encore des zones `[A COMPLETER AVANT PUBLICATION]`
+- les PDF lies depuis la cartographie ne sont pas inclus dans cette premiere declaration
+- un audit RGAA complet reste a conduire avant publication officielle
 
-```json
-"fallbackPdf": "pdf/sample.pdf"
-```
+## Mise a jour du DSFR
 
-### Modifier les couleurs / le style
-Dans `styles.css`.
+Les assets DSFR ont ete vendorises localement depuis le package officiel `@gouvfr/dsfr`.
 
-## Remarques importantes
+Si tu veux mettre a jour le bundle plus tard, le principe reste :
 
-- GitHub Pages est un hébergement **statique** : le fichier Excel n’est pas lu directement en ligne
-- la bonne méthode est donc :
-  1. convertir l’Excel en JSON
-  2. commit/push le JSON généré
-  3. publier le site
-- le projet est déjà prêt pour faire pointer chaque feuille métier vers un PDF spécifique via la colonne `file_pdf`
+1. recuperer la version officielle du package
+2. remplacer le contenu du dossier `dsfr/`
+3. verifier le rendu des pages et des composants utilises
 
-## Prochaine évolution facile
+## Publication
 
-Quand tu voudras brancher les vrais PDF, il suffira de renseigner la colonne `file_pdf` dans l’Excel avec les bons chemins. Aucun changement structurel du front ne sera nécessaire.
+Avant toute mise en ligne officielle, il faut au minimum :
+
+1. completer les mentions legales
+2. completer le schema pluriannuel
+3. completer le plan d'actions
+4. renseigner le vrai contact accessibilite
+5. auditer le site web
+6. qualifier les PDF ou fournir une alternative accessible
