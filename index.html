@@ -94,14 +94,43 @@
         </div>
       </noscript>
 
+      <section class="fr-pb-4w" aria-labelledby="graph-title">
+        <div class="rmfp-surface fr-p-3w fr-p-md-4w">
+          <div class="rmfp-section-head">
+            <div>
+              <h2 class="fr-h4 fr-mb-1w" id="graph-title">Vue graphique horizontale</h2>
+              <p class="fr-text--sm fr-mb-0" id="graph-description">
+                Cette vue visuelle synth&eacute;tise la cartographie RMFP. La navigation structur&eacute;e accessible reste disponible juste en dessous.
+              </p>
+            </div>
+            <div class="fr-btns-group fr-btns-group--inline-sm fr-btns-group--right fr-mb-0">
+              <button class="fr-btn fr-btn--secondary" id="recenter-graph" type="button">
+                Recentrer la selection
+              </button>
+            </div>
+          </div>
+
+          <div class="fr-alert fr-alert--info fr-mt-4w" id="graph-empty" hidden>
+            <h3 class="fr-alert__title">Vue graphique indisponible</h3>
+            <p>
+              La cartographie SVG ne peut pas etre affichee pour le moment. La navigation structuree HTML reste entierement utilisable.
+            </p>
+          </div>
+
+          <div class="rmfp-graph-shell fr-mt-4w" id="graph-shell" aria-describedby="graph-description">
+            <svg id="graph-svg" class="rmfp-graph-svg" aria-hidden="true" focusable="false"></svg>
+          </div>
+        </div>
+      </section>
+
       <div class="fr-grid-row fr-grid-row--gutters rmfp-layout fr-pb-8w">
         <section class="fr-col-12 fr-col-lg-7" aria-labelledby="cartographie-title">
           <div class="rmfp-surface fr-p-3w fr-p-md-4w">
             <div class="rmfp-section-head">
               <div>
-                <h2 class="fr-h4 fr-mb-1w" id="cartographie-title">Cartographie</h2>
+                <h2 class="fr-h4 fr-mb-1w" id="cartographie-title">Navigation structuree</h2>
                 <p class="fr-text--sm fr-mb-0" id="tree-description">
-                  Utilisez les boutons de branche pour ouvrir ou fermer un niveau puis selectionnez un metier FP pour afficher la fiche associee.
+                  Utilisez cette version HTML pour operer l&apos;arborescence au clavier, au lecteur d&apos;ecran et pour piloter la vue graphique.
                 </p>
               </div>
               <p class="fr-badge rmfp-badge rmfp-badge--info fr-mb-0" id="dataset-badge">Chargement</p>
@@ -282,6 +311,7 @@
     </div>
   </footer>
 
+  <script src="vendor/d3.min.js"></script>
   <script src="script.js"></script>
   <script type="module" src="dsfr/dsfr.module.min.js"></script>
   <script type="text/javascript" nomodule src="dsfr/dsfr.nomodule.min.js"></script>

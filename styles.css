@@ -18,6 +18,85 @@ body {
   background: var(--background-default-grey);
 }
 
+.rmfp-graph-shell {
+  min-height: 28rem;
+  overflow: auto;
+  border: 1px solid var(--border-default-grey);
+  border-radius: 0.75rem;
+  background:
+    radial-gradient(circle at top left, var(--background-alt-blue-france) 0, transparent 32%),
+    linear-gradient(180deg, var(--background-alt-grey) 0, var(--background-default-grey) 100%);
+  padding: 1rem;
+  scrollbar-gutter: stable both-edges;
+}
+
+.rmfp-graph-svg {
+  display: block;
+  min-width: 100%;
+  height: auto;
+}
+
+.rmfp-graph-link {
+  fill: none;
+  stroke: var(--border-default-blue-france);
+  stroke-linecap: round;
+  stroke-width: 2px;
+  opacity: 0.55;
+}
+
+.rmfp-graph-link.is-path {
+  stroke: var(--border-action-high-blue-france);
+  stroke-width: 3px;
+  opacity: 1;
+}
+
+.rmfp-graph-node rect {
+  fill: var(--background-default-grey);
+  stroke: var(--border-default-grey);
+  stroke-width: 1.5px;
+}
+
+.rmfp-graph-node text {
+  fill: var(--text-default-grey);
+}
+
+.rmfp-graph-node--domaine rect {
+  fill: var(--background-alt-blue-france);
+  stroke: var(--border-default-blue-france);
+}
+
+.rmfp-graph-node--famille rect {
+  fill: var(--background-alt-grey);
+}
+
+.rmfp-graph-node--emploi_reference rect {
+  fill: var(--background-contrast-grey);
+}
+
+.rmfp-graph-node.is-path rect {
+  stroke: var(--border-action-high-blue-france);
+}
+
+.rmfp-graph-node.is-selected rect {
+  fill: var(--background-contrast-blue-france);
+  stroke: var(--border-active-blue-france);
+  stroke-width: 3px;
+}
+
+.rmfp-graph-node.is-leaf rect {
+  stroke-width: 2px;
+}
+
+.rmfp-graph-title {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.rmfp-graph-subtitle {
+  fill: var(--text-mention-grey) !important;
+  font-size: 0.8125rem;
+}
+
 .rmfp-details {
   position: sticky;
   top: 1rem;
@@ -230,12 +309,18 @@ body {
     position: static;
   }
 
+  .rmfp-graph-shell,
   .rmfp-tree-wrapper {
     max-height: none;
   }
 }
 
 @media (max-width: 48em) {
+  .rmfp-graph-shell {
+    min-height: 22rem;
+    padding: 0.75rem;
+  }
+
   .rmfp-section-head {
     flex-direction: column;
   }

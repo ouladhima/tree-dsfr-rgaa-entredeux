@@ -1,4 +1,13 @@
 const DATA_URL = "data/rmfp-data.json";
+const GRAPH_SETTINGS = {
+  margin: { top: 40, right: 48, bottom: 40, left: 20 },
+  nodeHeight: 86,
+  horizontalGap: 290,
+  verticalGap: 104,
+  rootWidth: 220,
+  branchWidth: 250,
+  leafWidth: 320,
+};
 
 const elements = {
   searchInput: document.getElementById("search-input"),
@@ -23,6 +32,10 @@ const elements = {
   detailOpenLink: document.getElementById("detail-open-link"),
   detailDownloadLink: document.getElementById("detail-download-link"),
   detailPdfNote: document.getElementById("detail-pdf-note"),
+  graphShell: document.getElementById("graph-shell"),
+  graphSvg: document.getElementById("graph-svg"),
+  graphEmpty: document.getElementById("graph-empty"),
+  recenterGraphButton: document.getElementById("recenter-graph"),
 };
 
 const state = {
@@ -45,8 +58,10 @@ function bindUi() {
   elements.clearSearchButton.addEventListener("click", clearSearch);
   elements.collapseAllButton.addEventListener("click", () => collapseAll());
   elements.expandFirstLevelButton.addEventListener("click", () => expandFirstLevel());
+  elements.recenterGraphButton.addEventListener("click", recenterGraphOnCurrentTarget);
   elements.treeRoot.addEventListener("click", onTreeClick);
   elements.searchResults.addEventListener("click", onSearchResultClick);
+  window.addEventListener("resize", onWindowResize);
 }
 
 async function init() {
@@ -61,7 +76,7 @@ async function init() {
   const dataset = await response.json();
   prepareDataset(dataset);
   collapseAll(false);
-  render();
+  render({ centerNodeId: getDefaultGraphTargetId() });
   setBadge(`${state.records.length} fiches`, "success");
   updateStatus(getDefaultStatusText());
 }
@@ -213,14 +228,24 @@ function selectRecord(record, options = {}) {
   }
 
   expandPathToNode(node);
-  state.selectedId = node.id;
   hideSearchResults();
 
   if (options.updateSearchField) {
     elements.searchInput.value = record.intitule_metier_fp;
   }
 
-  render({ focusElementId: getLeafButtonId(node.id) });
+  selectNode(node, {
+    focusElementId: getLeafButtonId(node.id),
+    centerNodeId: node.id,
+  });
+}
+
+function selectNode(node, options = {}) {
+  state.selectedId = node.id;
+  render({
+    focusElementId: options.focusElementId || null,
+    centerNodeId: options.centerNodeId || node.id,
+  });
   updateStatus(`Metier selectionne : ${node.name}.`);
 }
 
@@ -236,19 +261,23 @@ function onTreeClick(event) {
   }
 
   if (button.dataset.action === "toggle") {
-    toggleBranch(node);
+    toggleBranch(node, {
+      focusElementId: getToggleButtonId(node.id),
+      centerNodeId: node.id,
+    });
     return;
   }
 
   if (button.dataset.action === "select") {
-    state.selectedId = node.id;
     hideSearchResults();
-    render({ focusElementId: getLeafButtonId(node.id) });
-    updateStatus(`Metier selectionne : ${node.name}.`);
+    selectNode(node, {
+      focusElementId: getLeafButtonId(node.id),
+      centerNodeId: node.id,
+    });
   }
 }
 
-function toggleBranch(node) {
+function toggleBranch(node, options = {}) {
   const isExpanded = state.expandedIds.has(node.id);
 
   if (isExpanded) {
@@ -256,13 +285,19 @@ function toggleBranch(node) {
     if (state.selectedId && isNodeInBranch(state.nodesById.get(state.selectedId), node)) {
       state.selectedId = null;
     }
-    render({ focusElementId: getToggleButtonId(node.id) });
+    render({
+      focusElementId: options.focusElementId || null,
+      centerNodeId: options.centerNodeId || node.id,
+    });
     updateStatus(`Branche repliee : ${node.name}.`);
     return;
   }
 
   state.expandedIds.add(node.id);
-  render({ focusElementId: getToggleButtonId(node.id) });
+  render({
+    focusElementId: options.focusElementId || null,
+    centerNodeId: options.centerNodeId || node.id,
+  });
   updateStatus(`Branche deployee : ${node.name}.`);
 }
 
@@ -271,7 +306,7 @@ function collapseAll(refresh = true) {
   state.selectedId = null;
 
   if (refresh) {
-    render();
+    render({ centerNodeId: getDefaultGraphTargetId() });
     updateStatus(getDefaultStatusText());
   }
 }
@@ -287,7 +322,7 @@ function expandFirstLevel(refresh = true) {
   });
 
   if (refresh) {
-    render();
+    render({ centerNodeId: getDefaultGraphTargetId() });
     updateStatus("Le premier niveau de la cartographie a ete deploye.");
   }
 }
@@ -306,9 +341,14 @@ function expandPathToNode(node) {
 function render(options = {}) {
   renderTree();
   renderDetails();
+  renderGraph();
 
   if (options.focusElementId) {
     focusElement(options.focusElementId);
+  }
+
+  if (options.centerNodeId) {
+    centerGraphOnNode(options.centerNodeId);
   }
 }
 
@@ -388,6 +428,149 @@ function createTreeItem(node) {
   return item;
 }
 
+function renderGraph() {
+  const graphUnavailable = typeof window.d3 === "undefined" || !state.root;
+  elements.graphEmpty.hidden = !graphUnavailable;
+  elements.graphShell.hidden = graphUnavailable;
+  elements.recenterGraphButton.disabled = graphUnavailable;
+
+  if (graphUnavailable) {
+    elements.graphSvg.innerHTML = "";
+    return;
+  }
+
+  const hierarchy = createVisibleHierarchy();
+  const allNodes = hierarchy.descendants();
+  const nodes = allNodes.filter((node) => node.depth > 0);
+  const links = hierarchy.links().filter((link) => link.source.depth > 0);
+
+  if (nodes.length === 0) {
+    elements.graphEmpty.hidden = false;
+    elements.graphShell.hidden = true;
+    elements.recenterGraphButton.disabled = true;
+    elements.graphSvg.innerHTML = "";
+    return;
+  }
+
+  const treeLayout = d3.tree().nodeSize([GRAPH_SETTINGS.verticalGap, GRAPH_SETTINGS.horizontalGap]);
+  treeLayout(hierarchy);
+
+  const top = d3.min(nodes, (node) => node.x) ?? 0;
+  const bottom = d3.max(nodes, (node) => node.x) ?? 0;
+  const maxRenderedX =
+    d3.max(nodes, (node) => getGraphNodeX(node) + getGraphNodeWidth(node.data)) ?? 0;
+
+  const width = Math.max(
+    elements.graphShell.clientWidth,
+    GRAPH_SETTINGS.margin.left + maxRenderedX + GRAPH_SETTINGS.margin.right
+  );
+  const height = Math.max(
+    340,
+    bottom - top + GRAPH_SETTINGS.margin.top + GRAPH_SETTINGS.margin.bottom + GRAPH_SETTINGS.nodeHeight
+  );
+  const verticalOffset = GRAPH_SETTINGS.margin.top - top;
+  const selectedPathIds = getSelectedPathIds();
+
+  const svg = d3.select(elements.graphSvg);
+  svg.selectAll("*").remove();
+  svg.attr("width", width).attr("height", height).attr("viewBox", [0, 0, width, height]);
+
+  const rootGroup = svg
+    .append("g")
+    .attr("transform", `translate(${GRAPH_SETTINGS.margin.left}, ${verticalOffset})`);
+
+  rootGroup
+    .selectAll("path.rmfp-graph-link")
+    .data(links, (link) => link.target.data.id)
+    .enter()
+    .append("path")
+    .attr("class", (link) => {
+      const classes = ["rmfp-graph-link"];
+      if (selectedPathIds.has(link.source.data.id) && selectedPathIds.has(link.target.data.id)) {
+        classes.push("is-path");
+      }
+      return classes.join(" ");
+    })
+    .attr("d", (link) => graphLinkPath(link));
+
+  const nodeSelection = rootGroup
+    .selectAll("g.rmfp-graph-node")
+    .data(nodes, (node) => node.data.id)
+    .enter()
+    .append("g")
+    .attr("id", (node) => getGraphNodeId(node.data.id))
+    .attr("class", (node) => getGraphNodeClass(node, selectedPathIds))
+    .attr("transform", (node) => `translate(${getGraphNodeX(node)}, ${node.x})`)
+    .style("cursor", "pointer")
+    .on("click", (event, node) => {
+      event.preventDefault();
+      onGraphNodeClick(node.data);
+    });
+
+  nodeSelection
+    .append("rect")
+    .attr("x", 0)
+    .attr("y", -GRAPH_SETTINGS.nodeHeight / 2)
+    .attr("rx", 18)
+    .attr("ry", 18)
+    .attr("width", (node) => getGraphNodeWidth(node.data))
+    .attr("height", GRAPH_SETTINGS.nodeHeight);
+
+  nodeSelection
+    .append("text")
+    .attr("class", "rmfp-graph-title")
+    .attr("x", 18)
+    .attr("y", -12);
+
+  nodeSelection
+    .append("text")
+    .attr("class", "rmfp-graph-subtitle")
+    .attr("x", 18)
+    .attr("y", 24)
+    .text((node) => getNodeMeta(node.data));
+
+  nodeSelection.each(function renderGraphText(node) {
+    const titleText = d3.select(this).select(".rmfp-graph-title");
+    titleText.selectAll("tspan").remove();
+    wrapSvgText(titleText, node.data.name, getGraphNodeWidth(node.data) - 36, 2);
+  });
+}
+
+function createVisibleHierarchy() {
+  return d3.hierarchy(state.root, (node) => {
+    if (!hasChildren(node)) {
+      return null;
+    }
+
+    if (node.id === state.root.id || state.expandedIds.has(node.id)) {
+      return node.children;
+    }
+
+    return null;
+  });
+}
+
+function onGraphNodeClick(node) {
+  if (hasChildren(node)) {
+    toggleBranch(node, { centerNodeId: node.id });
+    return;
+  }
+
+  hideSearchResults();
+  selectNode(node, { centerNodeId: node.id });
+}
+
+function onWindowResize() {
+  if (typeof window.d3 === "undefined" || !state.root) {
+    return;
+  }
+
+  window.requestAnimationFrame(() => {
+    renderGraph();
+    recenterGraphOnCurrentTarget();
+  });
+}
+
 function renderDetails() {
   const node = state.selectedId ? state.nodesById.get(state.selectedId) : null;
 
@@ -434,6 +617,9 @@ function handleInitError(error) {
   elements.clearSearchButton.disabled = true;
   elements.collapseAllButton.disabled = true;
   elements.expandFirstLevelButton.disabled = true;
+  elements.recenterGraphButton.disabled = true;
+  elements.graphEmpty.hidden = false;
+  elements.graphShell.hidden = true;
   elements.treeRoot.innerHTML = "";
 
   const errorItem = document.createElement("li");
@@ -479,6 +665,8 @@ function getNodeMeta(node) {
 
 function getCompactLevelLabel(node) {
   switch (node.level) {
+    case "root":
+      return "Vue";
     case "domaine":
       return "Domaine";
     case "famille":
@@ -490,6 +678,134 @@ function getCompactLevelLabel(node) {
     default:
       return "Niveau";
   }
+}
+
+function getSelectedPathIds() {
+  const ids = new Set();
+  let current = state.selectedId ? state.nodesById.get(state.selectedId) : null;
+
+  while (current) {
+    ids.add(current.id);
+    current = current.parentId ? state.nodesById.get(current.parentId) : null;
+  }
+
+  return ids;
+}
+
+function getGraphNodeClass(node, selectedPathIds) {
+  const classes = ["rmfp-graph-node", `rmfp-graph-node--${sanitizeLevel(node.data.level)}`];
+
+  if (selectedPathIds.has(node.data.id)) {
+    classes.push("is-path");
+  }
+
+  if (state.selectedId === node.data.id) {
+    classes.push("is-selected");
+  }
+
+  if (!hasChildren(node.data)) {
+    classes.push("is-leaf");
+  }
+
+  return classes.join(" ");
+}
+
+function getGraphNodeWidth(node) {
+  if (node.level === "root") {
+    return GRAPH_SETTINGS.rootWidth;
+  }
+
+  if (!hasChildren(node)) {
+    return GRAPH_SETTINGS.leafWidth;
+  }
+
+  return GRAPH_SETTINGS.branchWidth;
+}
+
+function getGraphNodeX(node) {
+  return Math.max(0, node.y - GRAPH_SETTINGS.horizontalGap);
+}
+
+function graphLinkPath(link) {
+  const sourceX = getGraphNodeX(link.source) + getGraphNodeWidth(link.source.data);
+  const sourceY = link.source.x;
+  const targetX = getGraphNodeX(link.target);
+  const targetY = link.target.x;
+  const delta = Math.max(36, (targetX - sourceX) / 2);
+  const bendX = sourceX + delta;
+
+  return `M${sourceX},${sourceY} H${bendX} C${bendX + 18},${sourceY} ${bendX + 18},${targetY} ${targetX},${targetY}`;
+}
+
+function wrapSvgText(textSelection, text, width, maxLines = 2) {
+  const words = String(text || "").split(/\s+/).filter(Boolean);
+  if (!words.length) {
+    return;
+  }
+
+  const x = Number(textSelection.attr("x")) || 0;
+  const measurement = textSelection
+    .append("tspan")
+    .attr("x", x)
+    .attr("dy", 0)
+    .style("visibility", "hidden");
+  const lines = [];
+  let index = 0;
+
+  while (index < words.length && lines.length < maxLines) {
+    let line = words[index];
+    index += 1;
+
+    while (index < words.length) {
+      const candidate = `${line} ${words[index]}`;
+      measurement.text(candidate);
+      if (measurement.node().getComputedTextLength() > width) {
+        break;
+      }
+      line = candidate;
+      index += 1;
+    }
+
+    lines.push(line);
+  }
+
+  if (index < words.length) {
+    const remainingText = `${lines.pop() || ""} ${words.slice(index).join(" ")}`.trim();
+    lines.push(truncateSvgText(measurement, remainingText, width));
+  }
+
+  measurement.remove();
+
+  lines.forEach((line, lineIndex) => {
+    textSelection
+      .append("tspan")
+      .attr("x", x)
+      .attr("dy", lineIndex === 0 ? "0em" : "1.16em")
+      .text(line);
+  });
+}
+
+function truncateSvgText(measurementSelection, text, width) {
+  const normalized = String(text || "").trim();
+  if (!normalized) {
+    return "";
+  }
+
+  measurementSelection.text(normalized);
+  if (measurementSelection.node().getComputedTextLength() <= width) {
+    return normalized;
+  }
+
+  let shortened = normalized;
+  while (shortened.length > 1) {
+    shortened = shortened.slice(0, -1).trimEnd();
+    measurementSelection.text(`${shortened}...`);
+    if (measurementSelection.node().getComputedTextLength() <= width) {
+      return `${shortened}...`;
+    }
+  }
+
+  return "...";
 }
 
 function hasDedicatedPdf(node) {
@@ -534,6 +850,10 @@ function getLeafButtonId(nodeId) {
   return `leaf-${nodeId}`;
 }
 
+function getGraphNodeId(nodeId) {
+  return `graph-node-${nodeId}`;
+}
+
 function focusElement(elementId) {
   window.requestAnimationFrame(() => {
     const element = document.getElementById(elementId);
@@ -553,6 +873,47 @@ function focusElement(elementId) {
       behavior: prefersReducedMotion() ? "auto" : "smooth",
     });
   });
+}
+
+function centerGraphOnNode(nodeId) {
+  window.requestAnimationFrame(() => {
+    if (elements.graphShell.hidden) {
+      return;
+    }
+
+    const nodeElement = nodeId ? document.getElementById(getGraphNodeId(nodeId)) : null;
+    if (!nodeElement) {
+      return;
+    }
+
+    const shellRect = elements.graphShell.getBoundingClientRect();
+    const nodeRect = nodeElement.getBoundingClientRect();
+    const nextLeft =
+      elements.graphShell.scrollLeft +
+      (nodeRect.left - shellRect.left) -
+      (elements.graphShell.clientWidth / 2 - nodeRect.width / 2);
+    const nextTop =
+      elements.graphShell.scrollTop +
+      (nodeRect.top - shellRect.top) -
+      (elements.graphShell.clientHeight / 2 - nodeRect.height / 2);
+
+    elements.graphShell.scrollTo({
+      left: Math.max(0, nextLeft),
+      top: Math.max(0, nextTop),
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+    });
+  });
+}
+
+function recenterGraphOnCurrentTarget() {
+  const targetId = state.selectedId || getDefaultGraphTargetId();
+  if (targetId) {
+    centerGraphOnNode(targetId);
+  }
+}
+
+function getDefaultGraphTargetId() {
+  return state.root?.children?.[0]?.id || null;
 }
 
 function sanitizeLevel(value) {

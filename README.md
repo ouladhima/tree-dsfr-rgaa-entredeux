@@ -3,7 +3,8 @@
 Site statique de consultation de la cartographie RMFP avec :
 
 - shell DSFR local vendore dans `dsfr/`
-- navigation HTML accessible en remplacement de l'ancien arbre SVG/D3
+- navigation HTML accessible pour l'usage conforme
+- vue graphique horizontale SVG/D3 synchronisee avec la navigation HTML
 - recherche metier / domaine / famille / ER
 - pages reglementaires RGAA
 
@@ -12,8 +13,10 @@ Site statique de consultation de la cartographie RMFP avec :
 - source de donnees unique : `data/rmfp-data.json`
 - aucun framework
 - aucun build step
-- dependance front retiree : plus de Google Fonts, plus de CDN D3
+- dependance front retiree : plus de Google Fonts, plus de CDN
+- D3 charge localement depuis `vendor/d3.min.js`
 - PDF exposes par liens standards "ouvrir" et "telecharger"
+- la vue HTML reste la reference pour l'accessibilite; le SVG est une visualisation secondaire
 
 ## Structure
 
@@ -44,6 +47,8 @@ Site statique de consultation de la cartographie RMFP avec :
 |   `-- index.html
 |-- scripts/
 |   `-- convert_excel_to_json.py
+|-- vendor/
+|   `-- d3.min.js
 |-- index.html
 |-- script.js
 |-- styles.css
@@ -83,6 +88,12 @@ Le script Python existant peut toujours regenerer `data/rmfp-data.json` depuis l
 - `/plan-actions/`
 - `/plan-du-site/`
 - `/mentions-legales/`
+
+La page d'accueil combine maintenant :
+
+- une vue graphique horizontale SVG/D3 pour la lecture d'ensemble
+- une navigation structuree HTML pour la navigation accessible et les actions
+- un panneau de detail pour les liens PDF
 
 ## Accessibilite
 
