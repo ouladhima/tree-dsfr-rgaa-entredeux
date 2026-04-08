@@ -1,13 +1,20 @@
 const DATA_URL = "data/rmfp-data.json";
 const GRAPH_SETTINGS = {
-  margin: { top: 40, right: 48, bottom: 40, left: 20 },
-  nodeHeight: 86,
-  horizontalGap: 290,
-  verticalGap: 104,
+  margin: { top: 88, right: 72, bottom: 72, left: 32 },
+  nodeHeight: 104,
+  horizontalGap: 294,
+  verticalGap: 128,
+  overlayGap: 24,
   rootWidth: 220,
-  branchWidth: 250,
-  leafWidth: 320,
+  branchWidth: 264,
+  leafWidth: 344,
 };
+const GRAPH_COLUMNS = [
+  { depth: 1, label: "Domaine fonctionnel" },
+  { depth: 2, label: "Famille" },
+  { depth: 3, label: "Emploi de r\u00e9f\u00e9rence" },
+  { depth: 4, label: "M\u00e9tier FP" },
+];
 
 const elements = {
   searchInput: document.getElementById("search-input"),
@@ -33,8 +40,17 @@ const elements = {
   detailDownloadLink: document.getElementById("detail-download-link"),
   detailPdfNote: document.getElementById("detail-pdf-note"),
   graphShell: document.getElementById("graph-shell"),
+  graphStage: document.getElementById("graph-stage"),
   graphSvg: document.getElementById("graph-svg"),
   graphEmpty: document.getElementById("graph-empty"),
+  graphOverlay: document.getElementById("graph-overlay"),
+  graphOverlayBadge: document.getElementById("graph-overlay-badge"),
+  graphOverlayTitle: document.getElementById("graph-overlay-title"),
+  graphOverlayPath: document.getElementById("graph-overlay-path"),
+  graphOffersCount: document.getElementById("graph-offers-count"),
+  graphOffersShare: document.getElementById("graph-offers-share"),
+  graphOpenLink: document.getElementById("graph-open-link"),
+  graphDownloadLink: document.getElementById("graph-download-link"),
   recenterGraphButton: document.getElementById("recenter-graph"),
 };
 
@@ -45,8 +61,14 @@ const state = {
   nodesById: new Map(),
   expandedIds: new Set(),
   selectedId: null,
+  graphOverlayNodeId: null,
   searchMatches: [],
   searchQuery: "",
+  graphLayout: {
+    width: 0,
+    height: 0,
+    nodeFrames: new Map(),
+  },
 };
 
 bindUi();
@@ -61,12 +83,13 @@ function bindUi() {
   elements.recenterGraphButton.addEventListener("click", recenterGraphOnCurrentTarget);
   elements.treeRoot.addEventListener("click", onTreeClick);
   elements.searchResults.addEventListener("click", onSearchResultClick);
+  document.addEventListener("click", onDocumentClick);
   window.addEventListener("resize", onWindowResize);
 }
 
 async function init() {
   setBadge("Chargement", "info");
-  updateStatus("Chargement des donnees...");
+  updateStatus("Chargement des donn\u00e9es...");
 
   const response = await fetch(DATA_URL, { cache: "no-store" });
   if (!response.ok) {
@@ -145,9 +168,9 @@ function onSearchInput(event) {
   renderSearchResults();
 
   if (state.searchMatches.length) {
-    updateStatus(`${state.searchMatches.length} resultat(s) affiche(s) pour "${rawQuery}".`);
+    updateStatus(`${state.searchMatches.length} r\u00e9sultat(s) affich\u00e9(s) pour "${rawQuery}".`);
   } else {
-    updateStatus(`Aucun resultat pour "${rawQuery}".`);
+    updateStatus(`Aucun r\u00e9sultat pour "${rawQuery}".`);
   }
 }
 
@@ -176,7 +199,7 @@ function renderSearchResults() {
   if (state.searchMatches.length === 0) {
     const emptyItem = document.createElement("li");
     emptyItem.className = "rmfp-result-item rmfp-result-item--empty";
-    emptyItem.textContent = "Aucun resultat. Essayez un autre mot-cle.";
+    emptyItem.textContent = "Aucun r\u00e9sultat. Essayez un autre mot-cl\u00e9.";
     fragment.appendChild(emptyItem);
   } else {
     state.searchMatches.forEach((record) => {
@@ -242,11 +265,12 @@ function selectRecord(record, options = {}) {
 
 function selectNode(node, options = {}) {
   state.selectedId = node.id;
+  state.graphOverlayNodeId = options.graphOverlayNodeId || null;
   render({
     focusElementId: options.focusElementId || null,
     centerNodeId: options.centerNodeId || node.id,
   });
-  updateStatus(`Metier selectionne : ${node.name}.`);
+  updateStatus(`M\u00e9tier s\u00e9lectionn\u00e9 : ${node.name}.`);
 }
 
 function onTreeClick(event) {
@@ -278,18 +302,20 @@ function onTreeClick(event) {
 }
 
 function toggleBranch(node, options = {}) {
+  state.graphOverlayNodeId = null;
   const isExpanded = state.expandedIds.has(node.id);
 
   if (isExpanded) {
     state.expandedIds.delete(node.id);
     if (state.selectedId && isNodeInBranch(state.nodesById.get(state.selectedId), node)) {
       state.selectedId = null;
+      state.graphOverlayNodeId = null;
     }
     render({
       focusElementId: options.focusElementId || null,
       centerNodeId: options.centerNodeId || node.id,
     });
-    updateStatus(`Branche repliee : ${node.name}.`);
+    updateStatus(`Branche repli\u00e9e : ${node.name}.`);
     return;
   }
 
@@ -298,12 +324,13 @@ function toggleBranch(node, options = {}) {
     focusElementId: options.focusElementId || null,
     centerNodeId: options.centerNodeId || node.id,
   });
-  updateStatus(`Branche deployee : ${node.name}.`);
+  updateStatus(`Branche d\u00e9ploy\u00e9e : ${node.name}.`);
 }
 
 function collapseAll(refresh = true) {
   state.expandedIds.clear();
   state.selectedId = null;
+  state.graphOverlayNodeId = null;
 
   if (refresh) {
     render({ centerNodeId: getDefaultGraphTargetId() });
@@ -314,6 +341,7 @@ function collapseAll(refresh = true) {
 function expandFirstLevel(refresh = true) {
   state.expandedIds.clear();
   state.selectedId = null;
+  state.graphOverlayNodeId = null;
 
   (state.root?.children || []).forEach((child) => {
     if (hasChildren(child)) {
@@ -323,7 +351,7 @@ function expandFirstLevel(refresh = true) {
 
   if (refresh) {
     render({ centerNodeId: getDefaultGraphTargetId() });
-    updateStatus("Le premier niveau de la cartographie a ete deploye.");
+    updateStatus("Le premier niveau de la cartographie a \u00e9t\u00e9 d\u00e9ploy\u00e9.");
   }
 }
 
@@ -342,6 +370,7 @@ function render(options = {}) {
   renderTree();
   renderDetails();
   renderGraph();
+  renderGraphOverlay();
 
   if (options.focusElementId) {
     focusElement(options.focusElementId);
@@ -359,7 +388,7 @@ function renderTree() {
   if (children.length === 0) {
     const emptyItem = document.createElement("li");
     emptyItem.className = "rmfp-empty-state";
-    emptyItem.textContent = "Aucune donnee n'est disponible pour la cartographie.";
+    emptyItem.textContent = "Aucune donn\u00e9e n'est disponible pour la cartographie.";
     elements.treeRoot.appendChild(emptyItem);
     return;
   }
@@ -435,7 +464,11 @@ function renderGraph() {
   elements.recenterGraphButton.disabled = graphUnavailable;
 
   if (graphUnavailable) {
+    state.graphLayout = { width: 0, height: 0, nodeFrames: new Map() };
+    elements.graphStage.style.width = "";
+    elements.graphStage.style.height = "";
     elements.graphSvg.innerHTML = "";
+    hideGraphOverlay();
     return;
   }
 
@@ -448,32 +481,43 @@ function renderGraph() {
     elements.graphEmpty.hidden = false;
     elements.graphShell.hidden = true;
     elements.recenterGraphButton.disabled = true;
+    state.graphLayout = { width: 0, height: 0, nodeFrames: new Map() };
+    elements.graphStage.style.width = "";
+    elements.graphStage.style.height = "";
     elements.graphSvg.innerHTML = "";
+    hideGraphOverlay();
     return;
   }
 
   const treeLayout = d3.tree().nodeSize([GRAPH_SETTINGS.verticalGap, GRAPH_SETTINGS.horizontalGap]);
   treeLayout(hierarchy);
 
-  const top = d3.min(nodes, (node) => node.x) ?? 0;
-  const bottom = d3.max(nodes, (node) => node.x) ?? 0;
+  const topEdge = d3.min(nodes, (node) => node.x - GRAPH_SETTINGS.nodeHeight / 2) ?? 0;
+  const bottomEdge = d3.max(nodes, (node) => node.x + GRAPH_SETTINGS.nodeHeight / 2) ?? 0;
   const maxRenderedX =
     d3.max(nodes, (node) => getGraphNodeX(node) + getGraphNodeWidth(node.data)) ?? 0;
 
   const width = Math.max(
-    elements.graphShell.clientWidth,
+    elements.graphShell.clientWidth - 2,
     GRAPH_SETTINGS.margin.left + maxRenderedX + GRAPH_SETTINGS.margin.right
   );
   const height = Math.max(
-    340,
-    bottom - top + GRAPH_SETTINGS.margin.top + GRAPH_SETTINGS.margin.bottom + GRAPH_SETTINGS.nodeHeight
+    420,
+    Math.ceil(bottomEdge - topEdge + GRAPH_SETTINGS.margin.top + GRAPH_SETTINGS.margin.bottom)
   );
-  const verticalOffset = GRAPH_SETTINGS.margin.top - top;
+  const verticalOffset = GRAPH_SETTINGS.margin.top - topEdge;
   const selectedPathIds = getSelectedPathIds();
+  const nodeFrames = new Map();
 
   const svg = d3.select(elements.graphSvg);
   svg.selectAll("*").remove();
   svg.attr("width", width).attr("height", height).attr("viewBox", [0, 0, width, height]);
+  elements.graphStage.style.width = `${width}px`;
+  elements.graphStage.style.height = `${height}px`;
+  state.graphLayout = { width, height, nodeFrames };
+
+  buildGraphDefs(svg);
+  renderGraphColumns(svg, height, nodes);
 
   const rootGroup = svg
     .append("g")
@@ -504,35 +548,118 @@ function renderGraph() {
     .style("cursor", "pointer")
     .on("click", (event, node) => {
       event.preventDefault();
+      event.stopPropagation();
       onGraphNodeClick(node.data);
     });
 
+  nodeSelection.each((node) => {
+    nodeFrames.set(node.data.id, {
+      x: GRAPH_SETTINGS.margin.left + getGraphNodeX(node),
+      y: verticalOffset + node.x - GRAPH_SETTINGS.nodeHeight / 2,
+      width: getGraphNodeWidth(node.data),
+      height: GRAPH_SETTINGS.nodeHeight,
+    });
+  });
+
   nodeSelection
     .append("rect")
+    .attr("class", "rmfp-graph-card")
     .attr("x", 0)
     .attr("y", -GRAPH_SETTINGS.nodeHeight / 2)
     .attr("rx", 18)
     .attr("ry", 18)
     .attr("width", (node) => getGraphNodeWidth(node.data))
+    .attr("height", GRAPH_SETTINGS.nodeHeight)
+    .attr("filter", "url(#rmfp-graph-shadow)");
+
+  nodeSelection
+    .append("rect")
+    .attr("class", "rmfp-graph-accent")
+    .attr("x", 0)
+    .attr("y", -GRAPH_SETTINGS.nodeHeight / 2)
+    .attr("rx", 18)
+    .attr("ry", 18)
+    .attr("width", 10)
     .attr("height", GRAPH_SETTINGS.nodeHeight);
 
   nodeSelection
     .append("text")
+    .attr("class", "rmfp-graph-eyebrow")
+    .attr("x", 20)
+    .attr("y", -28)
+    .text((node) => getGraphNodeEyebrow(node.data));
+
+  nodeSelection
+    .append("text")
     .attr("class", "rmfp-graph-title")
-    .attr("x", 18)
-    .attr("y", -12);
+    .attr("x", 20)
+    .attr("y", -4);
 
   nodeSelection
     .append("text")
     .attr("class", "rmfp-graph-subtitle")
-    .attr("x", 18)
-    .attr("y", 24)
-    .text((node) => getNodeMeta(node.data));
+    .attr("x", 20)
+    .attr("y", 36)
+    .text((node) => getGraphNodeSummary(node.data));
+
+  nodeSelection
+    .filter((node) => !hasChildren(node.data))
+    .append("circle")
+    .attr("class", "rmfp-graph-status-dot")
+    .attr("cx", (node) => getGraphNodeWidth(node.data) - 24)
+    .attr("cy", -28)
+    .attr("r", 6);
 
   nodeSelection.each(function renderGraphText(node) {
     const titleText = d3.select(this).select(".rmfp-graph-title");
     titleText.selectAll("tspan").remove();
-    wrapSvgText(titleText, node.data.name, getGraphNodeWidth(node.data) - 36, 2);
+    wrapSvgText(titleText, node.data.name, getGraphNodeWidth(node.data) - 44, 2);
+  });
+}
+
+function buildGraphDefs(svg) {
+  const defs = svg.append("defs");
+  const shadow = defs
+    .append("filter")
+    .attr("id", "rmfp-graph-shadow")
+    .attr("x", "-20%")
+    .attr("y", "-30%")
+    .attr("width", "160%")
+    .attr("height", "180%");
+
+  shadow
+    .append("feDropShadow")
+    .attr("dx", 0)
+    .attr("dy", 10)
+    .attr("stdDeviation", 12)
+    .attr("flood-color", "#000091")
+    .attr("flood-opacity", 0.08);
+}
+
+function renderGraphColumns(svg, height, nodes) {
+  const columnGroup = svg.append("g").attr("class", "rmfp-graph-columns");
+  const visibleDepths = new Set(nodes.map((node) => node.depth));
+
+  GRAPH_COLUMNS.filter((column) => visibleDepths.has(column.depth)).forEach((column) => {
+    const bandX = GRAPH_SETTINGS.margin.left + (column.depth - 1) * GRAPH_SETTINGS.horizontalGap - 18;
+    const bandWidth = getGraphColumnWidth(column.depth);
+
+    columnGroup
+      .append("rect")
+      .attr("class", `rmfp-graph-column-band rmfp-graph-column-band--${column.depth}`)
+      .attr("x", bandX)
+      .attr("y", 16)
+      .attr("width", bandWidth)
+      .attr("height", Math.max(220, height - 32))
+      .attr("rx", 26)
+      .attr("ry", 26);
+
+    columnGroup
+      .append("text")
+      .attr("class", "rmfp-graph-column-label")
+      .attr("x", bandX + 20)
+      .attr("y", 42)
+      .text(column.label);
   });
 }
 
@@ -557,7 +684,27 @@ function onGraphNodeClick(node) {
   }
 
   hideSearchResults();
-  selectNode(node, { centerNodeId: node.id });
+  selectNode(node, {
+    centerNodeId: node.id,
+    graphOverlayNodeId: node.id,
+  });
+}
+
+function onDocumentClick(event) {
+  if (!state.graphOverlayNodeId || elements.graphOverlay.classList.contains("hidden")) {
+    return;
+  }
+
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    return;
+  }
+
+  if (target.closest("#graph-overlay") || target.closest("g.rmfp-graph-node")) {
+    return;
+  }
+
+  closeGraphOverlay();
 }
 
 function onWindowResize() {
@@ -567,7 +714,83 @@ function onWindowResize() {
 
   window.requestAnimationFrame(() => {
     renderGraph();
+    renderGraphOverlay();
     recenterGraphOnCurrentTarget();
+  });
+}
+
+function renderGraphOverlay() {
+  const node = state.graphOverlayNodeId ? state.nodesById.get(state.graphOverlayNodeId) : null;
+  const frame = node ? state.graphLayout.nodeFrames.get(node.id) : null;
+
+  if (!node || !frame || hasChildren(node) || elements.graphShell.hidden) {
+    hideGraphOverlay();
+    return;
+  }
+
+  const pdfPath = resolvePdfPath(node.file_pdf);
+  const stats = getInventedOfferStats(node);
+
+  elements.graphOverlayBadge.textContent = hasDedicatedPdf(node)
+    ? "M\u00e9tier FP \u00b7 fiche d\u00e9di\u00e9e"
+    : "M\u00e9tier FP \u00b7 fiche standard";
+  elements.graphOverlayTitle.textContent = node.name;
+  elements.graphOverlayPath.textContent = node.path.join(" \u2192 ");
+  elements.graphOffersCount.textContent = new Intl.NumberFormat("fr-FR").format(stats.offers);
+  elements.graphOffersShare.textContent = formatShare(stats.share);
+  elements.graphOpenLink.href = encodeUriSafe(pdfPath);
+  elements.graphDownloadLink.href = encodeUriSafe(pdfPath);
+  elements.graphDownloadLink.setAttribute("download", extractFileName(pdfPath));
+  elements.graphOverlay.classList.remove("hidden");
+
+  positionGraphOverlay(frame);
+}
+
+function hideGraphOverlay() {
+  elements.graphOverlay.classList.add("hidden");
+  elements.graphOverlay.style.left = "";
+  elements.graphOverlay.style.top = "";
+}
+
+function closeGraphOverlay() {
+  state.graphOverlayNodeId = null;
+  hideGraphOverlay();
+}
+
+function positionGraphOverlay(frame) {
+  window.requestAnimationFrame(() => {
+    if (elements.graphOverlay.classList.contains("hidden")) {
+      return;
+    }
+
+    const overlayWidth = elements.graphOverlay.offsetWidth || 320;
+    const overlayHeight = elements.graphOverlay.offsetHeight || 240;
+    const stageWidth = state.graphLayout.width || elements.graphStage.clientWidth;
+    const stageHeight = state.graphLayout.height || elements.graphStage.clientHeight;
+    const margin = 16;
+    let left = frame.x + frame.width + GRAPH_SETTINGS.overlayGap;
+
+    if (left + overlayWidth > stageWidth - margin) {
+      left = frame.x - overlayWidth - GRAPH_SETTINGS.overlayGap;
+    }
+
+    if (left < margin) {
+      left = Math.max(
+        margin,
+        Math.min(stageWidth - overlayWidth - margin, frame.x + frame.width / 2 - overlayWidth / 2)
+      );
+    }
+
+    let top = frame.y + frame.height / 2 - overlayHeight / 2;
+    if (top + overlayHeight > stageHeight - margin) {
+      top = stageHeight - overlayHeight - margin;
+    }
+    if (top < margin) {
+      top = margin;
+    }
+
+    elements.graphOverlay.style.left = `${Math.round(left)}px`;
+    elements.graphOverlay.style.top = `${Math.round(top)}px`;
   });
 }
 
@@ -576,8 +799,8 @@ function renderDetails() {
 
   if (!node) {
     elements.selectionSummary.textContent =
-      "Selectionnez un metier FP dans l'arborescence ou via la recherche.";
-    elements.selectionState.textContent = "Aucune selection";
+      "S\u00e9lectionnez un m\u00e9tier FP dans l'arborescence ou via la recherche.";
+    elements.selectionState.textContent = "Aucune s\u00e9lection";
     elements.selectionState.className = "fr-badge rmfp-badge rmfp-badge--neutral fr-mb-0";
     elements.detailsEmpty.classList.remove("hidden");
     elements.detailsContent.classList.add("hidden");
@@ -587,23 +810,23 @@ function renderDetails() {
   const pdfPath = resolvePdfPath(node.file_pdf);
   const dedicatedPdf = hasDedicatedPdf(node);
 
-  elements.selectionSummary.textContent = `Metier selectionne : ${node.name}.`;
-  elements.selectionState.textContent = dedicatedPdf ? "Fiche dediee" : "Fiche standard";
+  elements.selectionSummary.textContent = `M\u00e9tier s\u00e9lectionn\u00e9 : ${node.name}.`;
+  elements.selectionState.textContent = dedicatedPdf ? "Fiche d\u00e9di\u00e9e" : "Fiche standard";
   elements.selectionState.className = dedicatedPdf
     ? "fr-badge rmfp-badge rmfp-badge--success fr-mb-0"
     : "fr-badge rmfp-badge rmfp-badge--info fr-mb-0";
 
   elements.detailPath.textContent = node.path.join(" \u2192 ");
-  elements.detailLevel.textContent = "Metier FP";
-  elements.detailDomain.textContent = node.path[1] || "Non renseigne";
-  elements.detailFamily.textContent = node.path[2] || "Non renseignee";
-  elements.detailEmployment.textContent = node.path[3] || "Non renseigne";
-  elements.detailDocument.textContent = `${extractFileName(pdfPath)} (${dedicatedPdf ? "fichier specifique" : "fichier standard"})`;
+  elements.detailLevel.textContent = "M\u00e9tier FP";
+  elements.detailDomain.textContent = node.path[1] || "Non renseign\u00e9";
+  elements.detailFamily.textContent = node.path[2] || "Non renseign\u00e9e";
+  elements.detailEmployment.textContent = node.path[3] || "Non renseign\u00e9";
+  elements.detailDocument.textContent = `${extractFileName(pdfPath)} (${dedicatedPdf ? "fichier sp\u00e9cifique" : "fichier standard"})`;
   elements.detailOpenLink.href = encodeUriSafe(pdfPath);
   elements.detailDownloadLink.href = encodeUriSafe(pdfPath);
   elements.detailDownloadLink.setAttribute("download", extractFileName(pdfPath));
   elements.detailPdfNote.textContent =
-    "Le document PDF s'ouvre dans un nouvel onglet. Ces PDF ne sont pas inclus dans la premiere declaration d'accessibilite du service web.";
+    "Le document PDF s'ouvre dans un nouvel onglet. Ces PDF ne sont pas inclus dans la premi\u00e8re d\u00e9claration d'accessibilit\u00e9 du service web.";
 
   elements.detailsEmpty.classList.add("hidden");
   elements.detailsContent.classList.remove("hidden");
@@ -612,12 +835,13 @@ function renderDetails() {
 function handleInitError(error) {
   console.error(error);
   setBadge("Erreur", "error");
-  updateStatus("Impossible de charger les donnees JSON.");
+  updateStatus("Impossible de charger les donn\u00e9es JSON.");
   elements.searchInput.disabled = true;
   elements.clearSearchButton.disabled = true;
   elements.collapseAllButton.disabled = true;
   elements.expandFirstLevelButton.disabled = true;
   elements.recenterGraphButton.disabled = true;
+  state.graphOverlayNodeId = null;
   elements.graphEmpty.hidden = false;
   elements.graphShell.hidden = true;
   elements.treeRoot.innerHTML = "";
@@ -625,7 +849,7 @@ function handleInitError(error) {
   const errorItem = document.createElement("li");
   errorItem.className = "rmfp-empty-state";
   errorItem.textContent =
-    "Le chargement des donnees a echoue. Verifiez le serveur HTTP local et le fichier data/rmfp-data.json.";
+    "Le chargement des donn\u00e9es a \u00e9chou\u00e9. V\u00e9rifiez le serveur HTTP local et le fichier data/rmfp-data.json.";
   elements.treeRoot.appendChild(errorItem);
 }
 
@@ -651,16 +875,16 @@ function updateStatus(message) {
 }
 
 function getDefaultStatusText() {
-  return `${state.records.length} fiche(s) disponible(s). Ouvrez une branche puis selectionnez un metier FP pour afficher la fiche associee.`;
+  return `${state.records.length} fiche(s) disponible(s). Ouvrez une branche puis s\u00e9lectionnez un m\u00e9tier FP pour afficher la fiche associ\u00e9e.`;
 }
 
 function getNodeMeta(node) {
   const level = getCompactLevelLabel(node);
   if (hasChildren(node)) {
-    return `${level} \u00b7 ${node.leafCount} metier(s)`;
+    return `${level} \u00b7 ${node.leafCount} m\u00e9tier(s)`;
   }
 
-  return `${level} \u00b7 ${hasDedicatedPdf(node) ? "fiche dediee" : "fiche standard"}`;
+  return `${level} \u00b7 ${hasDedicatedPdf(node) ? "fiche d\u00e9di\u00e9e" : "fiche standard"}`;
 }
 
 function getCompactLevelLabel(node) {
@@ -674,7 +898,7 @@ function getCompactLevelLabel(node) {
     case "emploi_reference":
       return "ER";
     case "metier_fp":
-      return "Metier FP";
+      return "M\u00e9tier FP";
     default:
       return "Niveau";
   }
@@ -707,7 +931,16 @@ function getGraphNodeClass(node, selectedPathIds) {
     classes.push("is-leaf");
   }
 
+  if (!hasChildren(node.data) && hasDedicatedPdf(node.data)) {
+    classes.push("has-dedicated-pdf");
+  }
+
   return classes.join(" ");
+}
+
+function getGraphColumnWidth(depth) {
+  const baseWidth = depth >= 4 ? GRAPH_SETTINGS.leafWidth : GRAPH_SETTINGS.branchWidth;
+  return baseWidth + 42;
 }
 
 function getGraphNodeWidth(node) {
@@ -726,15 +959,49 @@ function getGraphNodeX(node) {
   return Math.max(0, node.y - GRAPH_SETTINGS.horizontalGap);
 }
 
+function getGraphNodeEyebrow(node) {
+  return getCompactLevelLabel(node).toUpperCase();
+}
+
+function getGraphNodeSummary(node) {
+  if (hasChildren(node)) {
+    return `${node.leafCount} m\u00e9tier(s) rattach\u00e9(s)`;
+  }
+
+  return hasDedicatedPdf(node) ? "Fiche PDF d\u00e9di\u00e9e" : "Fiche PDF standard";
+}
+
 function graphLinkPath(link) {
   const sourceX = getGraphNodeX(link.source) + getGraphNodeWidth(link.source.data);
   const sourceY = link.source.x;
   const targetX = getGraphNodeX(link.target);
   const targetY = link.target.x;
-  const delta = Math.max(36, (targetX - sourceX) / 2);
-  const bendX = sourceX + delta;
+  const delta = Math.max(44, Math.min(96, (targetX - sourceX) / 2));
+  const sourceControlX = sourceX + delta;
+  const targetControlX = targetX - delta * 0.7;
 
-  return `M${sourceX},${sourceY} H${bendX} C${bendX + 18},${sourceY} ${bendX + 18},${targetY} ${targetX},${targetY}`;
+  return `M${sourceX},${sourceY} C${sourceControlX},${sourceY} ${targetControlX},${targetY} ${targetX},${targetY}`;
+}
+
+function getInventedOfferStats(node) {
+  const seed = hashString(node.id || node.name);
+  const offers = 100 + (seed % 1901);
+  const share = 0.1 + (((seed >> 5) % 50) / 10);
+
+  return {
+    offers,
+    share: Math.min(5, Number(share.toFixed(1))),
+  };
+}
+
+function formatShare(value) {
+  return `${Number(value || 0).toFixed(1).replace(".", ",")} %`;
+}
+
+function hashString(value) {
+  return Array.from(String(value || "")).reduce((hash, character) => {
+    return (hash * 31 + character.charCodeAt(0)) >>> 0;
+  }, 7);
 }
 
 function wrapSvgText(textSelection, text, width, maxLines = 2) {

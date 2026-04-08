@@ -19,82 +19,205 @@ body {
 }
 
 .rmfp-graph-shell {
-  min-height: 28rem;
+  position: relative;
+  min-height: 34rem;
   overflow: auto;
   border: 1px solid var(--border-default-grey);
-  border-radius: 0.75rem;
+  border-radius: 1rem;
   background:
-    radial-gradient(circle at top left, var(--background-alt-blue-france) 0, transparent 32%),
+    radial-gradient(circle at top left, var(--background-alt-blue-france) 0, transparent 30%),
+    radial-gradient(circle at bottom right, var(--background-alt-grey) 0, transparent 28%),
     linear-gradient(180deg, var(--background-alt-grey) 0, var(--background-default-grey) 100%);
   padding: 1rem;
   scrollbar-gutter: stable both-edges;
+}
+
+.rmfp-graph-stage {
+  position: relative;
+  min-height: 32rem;
 }
 
 .rmfp-graph-svg {
   display: block;
   min-width: 100%;
   height: auto;
+  overflow: visible;
+}
+
+.rmfp-graph-column-band {
+  fill: var(--background-default-grey);
+  stroke: var(--border-default-grey);
+  stroke-width: 1px;
+  opacity: 0.72;
+}
+
+.rmfp-graph-column-band--1 {
+  fill: var(--background-alt-blue-france);
+}
+
+.rmfp-graph-column-band--2 {
+  fill: var(--background-alt-grey);
+}
+
+.rmfp-graph-column-band--3 {
+  fill: var(--background-contrast-grey);
+  opacity: 0.32;
+}
+
+.rmfp-graph-column-band--4 {
+  fill: var(--background-default-grey);
+}
+
+.rmfp-graph-column-label {
+  fill: var(--text-mention-grey);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
 .rmfp-graph-link {
   fill: none;
   stroke: var(--border-default-blue-france);
   stroke-linecap: round;
-  stroke-width: 2px;
-  opacity: 0.55;
+  stroke-width: 2.5px;
+  opacity: 0.38;
 }
 
 .rmfp-graph-link.is-path {
   stroke: var(--border-action-high-blue-france);
-  stroke-width: 3px;
+  stroke-width: 4px;
   opacity: 1;
 }
 
-.rmfp-graph-node rect {
+.rmfp-graph-node text {
+  fill: var(--text-default-grey);
+  pointer-events: none;
+}
+
+.rmfp-graph-card {
   fill: var(--background-default-grey);
   stroke: var(--border-default-grey);
   stroke-width: 1.5px;
 }
 
-.rmfp-graph-node text {
-  fill: var(--text-default-grey);
+.rmfp-graph-accent {
+  fill: var(--background-flat-blue-france);
 }
 
-.rmfp-graph-node--domaine rect {
+.rmfp-graph-node--domaine .rmfp-graph-card {
   fill: var(--background-alt-blue-france);
   stroke: var(--border-default-blue-france);
 }
 
-.rmfp-graph-node--famille rect {
+.rmfp-graph-node--famille .rmfp-graph-card {
   fill: var(--background-alt-grey);
 }
 
-.rmfp-graph-node--emploi_reference rect {
+.rmfp-graph-node--emploi_reference .rmfp-graph-card {
   fill: var(--background-contrast-grey);
 }
 
-.rmfp-graph-node.is-path rect {
+.rmfp-graph-node--famille .rmfp-graph-accent {
+  fill: var(--background-flat-green-archipel);
+}
+
+.rmfp-graph-node--emploi_reference .rmfp-graph-accent {
+  fill: var(--background-flat-orange-terre-battue);
+}
+
+.rmfp-graph-node--metier_fp .rmfp-graph-accent {
+  fill: var(--background-flat-blue-ecume);
+}
+
+.rmfp-graph-node.is-path .rmfp-graph-card {
   stroke: var(--border-action-high-blue-france);
 }
 
-.rmfp-graph-node.is-selected rect {
-  fill: var(--background-contrast-blue-france);
+.rmfp-graph-node:hover .rmfp-graph-card {
+  stroke: var(--border-action-high-blue-france);
+}
+
+.rmfp-graph-node.is-selected .rmfp-graph-card {
+  fill: var(--background-default-grey);
   stroke: var(--border-active-blue-france);
   stroke-width: 3px;
 }
 
-.rmfp-graph-node.is-leaf rect {
-  stroke-width: 2px;
+.rmfp-graph-node.is-selected .rmfp-graph-title {
+  fill: var(--text-title-blue-france);
+}
+
+.rmfp-graph-eyebrow {
+  fill: var(--text-mention-grey) !important;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
 }
 
 .rmfp-graph-title {
-  font-size: 1rem;
+  font-size: 1.04rem;
   font-weight: 700;
 }
 
 .rmfp-graph-subtitle {
   fill: var(--text-mention-grey) !important;
   font-size: 0.8125rem;
+}
+
+.rmfp-graph-status-dot {
+  fill: var(--background-flat-info);
+  stroke: var(--background-default-grey);
+  stroke-width: 2px;
+}
+
+.rmfp-graph-node.has-dedicated-pdf .rmfp-graph-status-dot {
+  fill: var(--background-flat-success);
+}
+
+.rmfp-graph-overlay {
+  position: absolute;
+  z-index: 2;
+  width: min(22rem, calc(100% - 2rem));
+  border: 1px solid var(--border-default-grey);
+  border-radius: 1rem;
+  background: var(--background-default-grey);
+  box-shadow: 0 1rem 2.5rem rgba(0, 0, 145, 0.12);
+  padding: 1rem;
+}
+
+.rmfp-graph-overlay-path,
+.rmfp-graph-overlay-note {
+  color: var(--text-mention-grey);
+  overflow-wrap: anywhere;
+}
+
+.rmfp-graph-stats {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.rmfp-graph-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  border: 1px solid var(--border-default-grey);
+  border-radius: 0.75rem;
+  background: var(--background-alt-grey);
+  margin: 0;
+  padding: 0.75rem;
+}
+
+.rmfp-graph-stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.rmfp-graph-stat-label {
+  color: var(--text-mention-grey);
+  font-size: 0.75rem;
+  line-height: 1.35;
 }
 
 .rmfp-details {
@@ -317,8 +440,21 @@ body {
 
 @media (max-width: 48em) {
   .rmfp-graph-shell {
-    min-height: 22rem;
+    min-height: 24rem;
     padding: 0.75rem;
+  }
+
+  .rmfp-graph-stage {
+    min-height: 26rem;
+  }
+
+  .rmfp-graph-overlay {
+    width: min(18rem, calc(100% - 1rem));
+    padding: 0.875rem;
+  }
+
+  .rmfp-graph-stats {
+    grid-template-columns: 1fr;
   }
 
   .rmfp-section-head {

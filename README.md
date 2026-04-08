@@ -60,7 +60,7 @@ Site statique de consultation de la cartographie RMFP avec :
 Le JSON est charge via HTTP. Il faut donc lancer un serveur local.
 
 ```bash
-python -m http.server 8000
+remote
 ```
 
 Puis ouvrir :
